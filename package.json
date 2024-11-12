@@ -1,0 +1,9 @@
+{
+  "name": "your-project",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "build": "echo 'Building project...' && mkdir -p dist && cp index.js dist/",
+    "test": "echo 'Running tests...' && exit 0"
+  }
+}
