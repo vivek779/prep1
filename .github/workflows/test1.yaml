@@ -1,0 +1,64 @@
+name: Build and Package
+
+on:
+  push:
+    branches:
+      - main
+      - 'release/*'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '14'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Run tests
+      run: npm test
+
+    - name: Determine package version
+      id: version
+      run: |
+        if [[ "${GITHUB_REF}" == refs/heads/main ]]; then
+          echo "::set-output name=version::$(jq -r '.version' package.json)"
+        else
+          BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')
+          echo "::set-output name=version::$(jq -r '.version' package.json)-${BRANCH_NAME}"
+        fi
+
+    - name: Build package
+      run: npm run build
+
+    - name: Create package
+      run: |
+        VERSION=${{ steps.version.outputs.version }}
+        npm pack --pack-destination ./dist --pack-version ${VERSION}
+
+    - name: Upload package
+      uses: actions/upload-artifact@v2
+      with:
+        name: my-package
+        path: ./dist/*.tgz
+
+    - name: Push package to Cloudsmith
+      uses: cloudsmith-io/action@master
+      with:
+        api-key: ${{ 0e8cac5a4671e2e13d54616460902c017aafaec1 }}
+        command: push
+        format: npm
+        owner: your-cloudsmith-org
+        repo: your-cloudsmith-repo
+        file: ./dist/*.tgz
